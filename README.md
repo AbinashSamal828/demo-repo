@@ -129,10 +129,46 @@ Before setting up the integration, ensure you have the following:
    });
    ```
 
-3. **Create a `.env` File**:
+3. **Create a Validation Middleware** (`validateWebhookPayload.js`):
+
+   ```javascript
+   require("dotenv").config();
+   const crypto = require("crypto");
+   const sigHeaderName = "X-Hub-Signature-256";
+   const sigHashAlg = "sha256";
+
+   function validateWebhookPayload(req, res, next) {
+     if (req.method === "POST") {
+       if (!req.rawBody) {
+         return next("Request body empty");
+       }
+       const secret = process.env.PAYLOAD_VALIDATION_SECRET;
+       
+       const sig = Buffer.from(req.get(sigHeaderName) || "", "utf8");
+       const hmac = crypto.createHmac(sigHashAlg, secret);
+       const digest = Buffer.from(
+         sigHashAlg + "=" + hmac.update(req.rawBody).digest("hex"),
+         "utf8"
+       );
+
+       if (sig.length !== digest.length || !crypto.timingSafeEqual(digest, sig)) {
+         return next(
+           `Request body digest (${digest}) did not match ${sigHeaderName} (${sig})`
+         );
+       }
+     }
+
+     return next();
+   }
+
+   module.exports = validateWebhookPayload;
+   ```
+
+4. **Create a `.env` File**:
 
    ```env
    ASANA_ACCESS_TOKEN=your_asana_access_token
+   PAYLOAD_VALIDATION_SECRET=your_github_webhook_secret
    ```
 
 ### 4. **Configure GitHub Webhook**
@@ -144,7 +180,7 @@ Before setting up the integration, ensure you have the following:
    - Go to the "Webhooks" section and click "Add webhook."
    - Enter the payload URL provided by LocalTunnel (e.g., `http://webhook-integration-828.localtunnel.me/new-issue`).
    - Set the content type to `application/json`.
-   - Add a secret for validation if using a custom validation function.
+   - Add a secret for validation that matches the `PAYLOAD_VALIDATION_SECRET` from your `.env` file.
    - Select the events to trigger the webhook, such as "Issues".
 
 3. **Save the Webhook**.
@@ -171,4 +207,7 @@ Before setting up the integration, ensure you have the following:
 - [GitHub Webhooks Documentation](https://docs.github.com/en/developers/webhooks-and-events/webhooks/creating-webhooks)
 - [Node.js Express Documentation](https://expressjs.com/)
 - [LocalTunnel Documentation](https://localtunnel.github.io/www/)
+- [Crypto Documentation](https://node.readthedocs.io/en/latest/api/crypto/)
 
+```
+This README provides comprehensive instructions for setting up and configuring the GitHub to Asana integration, including details about the validation middleware. Let me know if there are any more details you’d like to include!
