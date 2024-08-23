@@ -105,7 +105,7 @@ Before setting up the integration, ensure you have the following:
              projects: "1208128739940832",
              id: payload.issue.url,
              due_on: "2024-09-01",
-             assignee: "me", // Use the Asana user ID for the assignee
+             assignee: "me",
            },
          };
          let opts = {
