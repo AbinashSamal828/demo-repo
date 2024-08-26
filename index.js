@@ -4,6 +4,7 @@ const localtunnel = require("localtunnel");
 const bodyParser = require("body-parser");
 const Asana = require("asana");
 const validateWebhookPayload = require("./validateWebhookPayload");
+const { getUserGid } = require("./getUserGid");
 
 let client = Asana.ApiClient.instance;
 let token = client.authentications["token"];
@@ -41,10 +42,11 @@ app.get("/", (req, res) => {
   res.send("Working");
 });
 
-app.post("/new-issue", validateWebhookPayload, (req, res) => {
+app.post("/new-issue", validateWebhookPayload, async (req, res) => {
   try {
     const payload = req.body;
     console.log("Received webhook:", payload);
+    const assignee_gid = await getUserGid(payload.issue.user.login);
     res.status(200).send("Webhook received");
     if (payload.action === "opened" || payload.action === "reopened") {
       let tasksApiInstance = new Asana.TasksApi();
@@ -56,7 +58,7 @@ app.post("/new-issue", validateWebhookPayload, (req, res) => {
           projects: "1208128739940832",
           id: payload.issue.url,
           due_on: "2024-09-01",
-          assignee: "me",
+          assignee: assignee_gid,
         },
       };
       let opts = {
